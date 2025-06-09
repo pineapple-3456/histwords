@@ -139,3 +139,6 @@ sympy-plots-for-*.tex/
 
 # virtualenv
 histwords/
+/.idea
+*.xml
+*.iml
