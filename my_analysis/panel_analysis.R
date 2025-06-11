@@ -1,6 +1,7 @@
 library(tidyverse)
 library(lmerTest)
-library(nlme)
+library(showtext)
+showtext_auto()
 
 panel_data <- read.csv("my_analysis/panel_data.csv")
 
@@ -12,22 +13,31 @@ panel_data <- panel_data %>%
   #{ .[, paste0("X", "", seq(1950, 1990, 10))] <- scale(.[, paste0("X", "", seq(1950, 1990, 10))]); . } %>%
   pivot_longer(paste0("X", "", seq(1950, 1990, 10)), names_to = "decade", values_to = "similarity")
 
-# 绘图，误差棒是标准误，
-# 标记为注释的两行分别是把误差棒改成标准差，和把回归直线改为连线
-ggplot(panel_data, aes(decade, similarity, col = attribute)) +
-  stat_summary(fun = "mean", geom = "point", position = position_dodge(0.2)) +
-  stat_summary(fun.min = function(x) mean(x) + sd(x) / sqrt(length(x)), fun.max = function(x) mean(x) - sd(x) / sqrt(length(x)),
-               #fun.min = function(x) mean(x) + sd(x), fun.max = function(x) mean(x) - sd(x),
-               geom = "errorbar", width = 0.2,
-               position = position_dodge(0.2)) +
+# 绘图
+plot_1 <- ggplot(panel_data, aes(decade, similarity, col = attribute)) +
+  geom_point(position = position_jitterdodge(0.15), size = 1, alpha = 0.4) +
+  #stat_summary(fun = "mean", geom = "point", position = position_dodge(0.1), size = 1) +
+  #stat_summary(fun.min = function(x) mean(x) + sd(x) / sqrt(length(x)),
+  #             fun.max = function(x) mean(x) - sd(x) / sqrt(length(x)),
+  #             #fun.min = function(x) mean(x) + sd(x), fun.max = function(x) mean(x) - sd(x),
+  #             geom = "errorbar", width = 0.15,
+  #             position = position_dodge(0.2)) +
   #stat_summary(aes(group = attribute), fun = "mean", geom = "line", position = position_dodge(0.2)) +
-  geom_smooth(aes(group = attribute), method = "lm", se = FALSE) +
-  theme_bw()
+  geom_smooth(aes(group = attribute), method = "lm", se = TRUE, position = position_dodge(0.75)) +
+  scale_color_manual("", values = c("#5066a1", "#e8743c"),
+                     labels = c("道德-自我", "道德-他人")) +
+  scale_x_discrete(labels = c("1950", "1960", "1970", "1980", "1990")) +
+  theme_bw() +
+  theme(legend.position = "top")
+
+ggsave("my_analysis/interaction.pdf", width = 17, height = 15, units = "cm")
 
 # 自变量编码，混合效应模型估计
 panel_data$decade_code <- panel_data$decade
 for (decade in seq(1950, 1990, 10)) {
-  panel_data$decade_code <- replace(panel_data$decade_code, panel_data$decade_code == paste0("X", "", decade), (decade - 1950) / 10)
+  panel_data$decade_code <- replace(panel_data$decade_code,
+                                    panel_data$decade_code == paste0("X", "", decade),
+                                    (decade - 1950) / 10)
 }
 panel_data$decade_code <- as.numeric(panel_data$decade_code)
 panel_data$attribute_code <- relevel(factor(panel_data$attribute), ref = "attribute_1")
